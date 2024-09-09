@@ -5,15 +5,25 @@ This repository contains the analysis scripts and data used for the manuscript t
 ## Files and Figures
 The files are organized by figure number. Below is a brief description of the structure:
 
-*  Figure 1: figure1_script.R
-*  Figure 2: figure2_analysis.R
-*  Figure 3: figure3_plot.R
-*  Figure 4: figure1_script.R
-*  Figure 5: figure2_analysis.R
-*  Figure 6: figure3_plot.R
-*  Figure 7: figure1_script.R
-*  Figure 8: figure2_analysis.R
-*  Figure 9: figure3_plot.R
+| Figure in Manuscript | Experiment Type | Script Name |
+-----------------------|-----------------|------------|
+Fig.1 b-c | Xenon in APPPS1 - Mice |
+Fig.1 l-m | Xenon in Microglia in vitro - Mice |
+Fig. 3 | Xenon scRNAseq Myeloid |
+Fig 4. m-n | Xenon in IPSMG H5xFAD | 
+Fig. 4 r, u and v | 5xFAD-MITRG Astrocytes 6M |
+Fig. 6 a-g | Xenon in IFNgr1 cKO |
+Fig. 6 i-k | Xenon in APPPS1 IFNy blocker-Mice |
+Fig. 8  | Tau |
+Supp. Fig.1 d-e | Xenon PD in MGnD paradigm |
+Supp. Fig.2 a-f | Xenon PK in APP.PS1 microglia -mice |
+Supp. Fig. 3 d-e | Tdt Tomato - mice |
+Fig. 3 | Xenon scRNAseq Myeloid |
+Supp Fig 5. a-d | Xenon-iMGL in vitro |
+Supp Fig.6 a-c | 5xFAD-MITRG-iMGL 6M |
+Supp Fig.7 c-e | Xenon in IFNy blocker -mice |
+Supp Fig 9 a-g | Xenon PK in APP.PS1 Tcells -mice |
+
 Each script contains all necessary steps to reproduce the analysis and figures presented in the manuscript. Be sure to follow the usage instructions and install the required dependencies.
 
 ## Languages and Packages
