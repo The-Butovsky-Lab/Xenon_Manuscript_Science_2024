@@ -5,10 +5,15 @@ This repository contains the analysis scripts and data used for the manuscript t
 ## Files and Figures
 The files are organized by figure number. Below is a brief description of the structure:
 
-Figure 1: figure1_script.R
-Figure 2: figure2_analysis.R
-Figure 3: figure3_plot.R
-(Continue for each figure)
+*  Figure 1: figure1_script.R
+*  Figure 2: figure2_analysis.R
+*  Figure 3: figure3_plot.R
+*  Figure 4: figure1_script.R
+*  Figure 5: figure2_analysis.R
+*  Figure 6: figure3_plot.R
+*  Figure 7: figure1_script.R
+*  Figure 8: figure2_analysis.R
+*  Figure 9: figure3_plot.R
 Each script contains all necessary steps to reproduce the analysis and figures presented in the manuscript. Be sure to follow the usage instructions and install the required dependencies.
 
 ## Languages and Packages
