@@ -13,7 +13,7 @@ Each script contains all necessary steps to reproduce the analysis and figures p
 
 ## Languages and Packages
 The code is primarily written in the following languages:
-* R (4.2.1): Used for data analysis and visualization. <br>
+* R (v4.2.1): Used for data analysis and visualization. <br>
 * Shell: Used for pre-processing the fastq files
 
 ### Major R Packages: <br>
