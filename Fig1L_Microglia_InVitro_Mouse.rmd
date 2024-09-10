@@ -1,0 +1,142 @@
+---
+output: reprex::reprex_document
+knit: reprex::reprex_render
+---
+
+# 1.0 Setup the Environment
+
+```{r Setup the Environment, echo=FALSE, message=FALSE}
+suppressPackageStartupMessages({
+# Load packages
+library(tidyverse)
+library(magrittr)
+library(org.Mm.eg.db)
+library(factoextra)
+library(gt)
+})
+
+# Setup Pathways
+workdir <- "XXXX"
+scriptDir <- "XXXX"
+
+# Set version control
+set.seed(123)
+
+# # Load DESeq workflow scripts
+source(file = paste0(workdir,scriptDir,"DESeq.R"))
+source(file = paste0(workdir,scriptDir,"DataVisualizations.R"))
+source(file = paste0(workdir,scriptDir,"Deseq_Statistics.R"))
+
+# Set Diagram settings
+options(width=200)
+```
+
+
+# 2.0 Chamber 5cyt
+## 2.1 Load Data
+```{r pressure, ecdho=FALSE}
+#_____________UPDATE!______________#
+# Setup Variables
+expdir <- "XXXXX"
+
+# Load Data
+meta <- readxl::read_excel(paste0(workdir, expdir,"MetaData.xlsx")) 
+quantfiles <- file.path(workdir,expdir,"transcripts_quant/", meta$Position, "quant.sf")
+#_________________________________#
+```
+
+## 2.2 DESEQ
+### 2.2.1 Modify Metadata 
+```{r, echo=FALSE}
+##________UPDATE ENTIRE SECTION___________##
+# Set a file prefix
+fileprefix <- "XXXXXX" # Experimental group should be listed first in the file prefix**
+
+# Extract Samples Meta Data & Filter Outliers
+sub_meta <- meta %>% mutate(Grouped = paste0(Position,"_",Gender,"_",Treatment))
+
+# Pull specific Quant files
+position_list <- paste0(sub_meta$Position, collapse = '|')
+sample_files <- grep(position_list, quantfiles, value = TRUE) # Check number of files matches # of samples
+
+# Check the metadata and files are in the correct order
+## QC check - Order of metafile samples must match quant file order!  Fix metadata file if not!
+all(file.exists(quantfiles))
+
+## Create Graphs All 
+table_lab <- sub_meta$Grouped
+
+# Format the Meta Data
+table_header <- "Mouse Samples"
+sub_meta %>%
+  gt() %>% 
+  tab_header(
+    title = md("**Meta Data for samples**"),
+    subtitle = md(paste0(table_header, " experiment's meta data are presented"))
+  ) %>%
+  cols_move_to_start(
+    columns = c(Position, Treatment) # Update based on columns **
+  )
+```
+
+### 2.2.2 Tximport/DESeq
+
+```{r, echo=FALSE}
+#_____________UPDATE!______________#
+# Setup the Design for Tximport/DESeq2
+design = "Treatment"
+treatcolumn = "Treatment"
+control = "M-CSF"
+refanimal = "mouse"
+type <- "LRT"
+#_________________________________#
+# Run Tx2gene
+tx2gene <- tx2genefun(reference = refanimal)
+
+# Run Tximport and DESeq 
+ddsTxi <- Tximportfun(sample_files,reference = refanimal, metadata = sub_meta, design = design, tx2gene = tx2gene)
+dds <- DESeqFun(treatcolumn = treatcolumn, control = control, DESeqObject = ddsTxi, test_type = type)
+
+# Save Deseq output
+ddsobj <- dds[[1]] # DESeq Object
+ddsres <- dds[[2]]# Results
+```
+
+### 2.2.3 Export DESEQ results
+
+```{r}
+#_____________UPDATE!______________#
+resdir <- paste0(workdir,expdir,"XXXXX")
+#__________________________________#
+
+# Extract the stats on the DESeq run 
+extractedstats <-  extractstats(ddsobj, ContrastObj = ddsres ,sub_meta, graphlabel = table_lab)
+
+# Save to variables
+DEResults <- extractedstats[[1]] 
+DEcounts <- extractedstats[[2]] %>% .[c(1,9:14,2:8)]
+sigDEResults <- extractedstats[[3]]
+sigDEcounts <- extractedstats[[4]] %>% .[c(1,9:14,2:8)]
+
+
+# Get summary on the deseq run
+summary(ddsres, alpha = 0.05)
+
+# Export the Stats
+exportstats(DEResults = DEResults, DEcounts = DEcounts,sigDEResults = sigDEResults, 
+            sigDEcounts = sigDEcounts, directory = resdir,fileprefix = fileprefix)
+```
+
+## 2.3 Data Exploration
+### 2.3.1 Fig 1L
+
+```{r}
+#_____________UPDATE!______________#
+heatmapdir <- paste0(workdir, expdir, "XXXXX")
+#__________________________________#
+
+# Generate Heatmap for significant genes
+genheatmap(sigDEcounts, colnames(sigDEcounts)[-1], height = 420, width = 15, directory = heatmapdir, cutrow = 4, gap_col = c(3,6,9),fileprefix = fileprefix, suffix = "pvalue05.pdf", show_row = TRUE)
+genheatmap(sigDEcounts, colnames(sigDEcounts)[-1], height = 420, width = 15, directory = heatmapdir, cutrow = 4, gap_col = c(3,6,9),fileprefix = fileprefix, suffix = "pvalue05_nolabels.pdf", show_row = FALSE)
+```
+
