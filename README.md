@@ -5,8 +5,8 @@ This repository contains the analysis scripts and data used for the manuscript t
 ## Files and Figures
 The files are organized by figure number. Below is a brief description of the structure:
 
-| Figure in Manuscript | Experiment Type | Script Name |
------------------------|-----------------|------------|
+| Figure in Manuscript | Experiment Type | Script Name | GSE |
+-----------------------|-----------------|------------|-------|
 Fig.1 b-c | Xenon in APPPS1 - Mice |
 Fig.1 l-m | Xenon in Microglia in vitro - Mice |
 Fig. 3 | Xenon scRNAseq Myeloid |
