@@ -10,8 +10,8 @@ The files are organized by figure number. Below is a brief description of the st
 Fig.1 b-c | Xenon in APPPS1 - Mice | Fig1BC_APPPS1_Mouse_XenonvsAir | GSE269157 |
 Fig.1 l-m | Xenon in Microglia in vitro - Mice | Fig1L_Microglia_InVitro_Mouse | GSE272910|
 Fig. 3 | Xenon scRNAseq Myeloid | | GSE274764 |
-Fig 4. m-n | Xenon in IPSMG H5xFAD | GSE269481 |
-Fig. 4 r, u and v | 5xFAD-MITRG Astrocytes 6M | GSE271423 |
+Fig 4. m-n | Xenon in IPSMG H5xFAD | | GSE269481 |
+Fig. 4 r, u and v | 5xFAD-MITRG Astrocytes 6M | | GSE271423 |
 Fig. 6 a-g | Xenon in IFNgr1 cKO |
 Fig. 6 i-k | Xenon in APPPS1 IFNy blocker-Mice |
 Fig. 8  | Tau |
