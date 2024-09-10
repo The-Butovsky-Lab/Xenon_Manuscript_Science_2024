@@ -12,7 +12,7 @@ Fig.1 l-m | Xenon in Microglia in vitro - Mice | Fig1L_Microglia_InVitro_Mouse |
 Fig. 3 | Xenon scRNAseq Myeloid | | GSE274764 |
 Fig 4. m-n | Xenon in IPSMG H5xFAD | Fig4M-N_Xenon in IPSMG_H5xFAD_MITRG_Mouse | GSE269481 |
 Fig. 4 r, u and v | 5xFAD-MITRG Astrocytes 6M | Fig4R_U-V_5xFAD-MITRG Astrocytes 6M_Mouse | GSE271423 |
-Fig. 6 a-g | Xenon in IFNgr1 cKO |
+Fig. 6 a-g | Xenon in IFNgr1 cKO | GSE271471 |
 Fig. 6 i-k | Xenon in APPPS1 IFNy blocker-Mice |
 Fig. 8  | Tau |
 Supp. Fig.1 d-e | Xenon PD in MGnD paradigm |
