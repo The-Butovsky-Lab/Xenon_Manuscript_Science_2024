@@ -7,7 +7,7 @@ The files are organized by figure number. Below is a brief description of the st
 
 | Figure in Manuscript | Experiment Type | Script Name | GSE |
 -----------------------|-----------------|------------|-------|
-Fig.1 b-c | Xenon in APPPS1 - Mice |
+Fig.1 b-c | Xenon in APPPS1 - Mice | Fig1BC_APPPS1_Mouse_XenonvsAir | GSE269157 |
 Fig.1 l-m | Xenon in Microglia in vitro - Mice |
 Fig. 3 | Xenon scRNAseq Myeloid |
 Fig 4. m-n | Xenon in IPSMG H5xFAD | 
