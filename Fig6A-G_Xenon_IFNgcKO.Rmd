@@ -1,0 +1,399 @@
+---
+title: ""
+author: "Madison Carpenter"
+date: "2023-02-16"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# 1.0 Setup the Environment
+
+```{r Setup the Environment, echo=FALSE, message=FALSE}
+# Load packages
+library(tidyverse)
+library(magrittr)
+library(WriteXLS)
+library(pathview)
+library(xlsx)
+library(ggVennDiagram)
+library(factoextra)
+library(gt)
+library(clusterProfiler)
+library(KEGGREST)
+
+# Setup Pathways
+workdir <- "XXXXXX"
+scriptDir <- "XXXXX"
+
+# Set version control
+set.seed(123)
+
+# # Load DESeq workflow scripts
+source(file = paste0(workdir,scriptDir,"DESeq.R"))
+source(file = paste0(workdir,scriptDir,"DataVisualizations.R"))
+source(file = paste0(workdir,scriptDir,"Deseq_Statistics.R"))
+source(file = paste0(workdir,scriptDir, "pathway_graphs.R"))
+source(file = paste0(workdir,scriptDir, "GoEnrichAnalysis.R"))
+
+# Set Diagram settings
+options(width=200)
+```
+
+# 2.0 Load Data
+
+```{r pressure, echo=FALSE}
+#_____________UPDATE!______________#
+# Setup Variables
+expdir <- "XXXXXX"
+
+meta <- readxl::read_excel(paste0(workdir,expdir,"Metadata.xlsx"))
+quantfiles <- file.path(workdir,expdir,"data/", meta$Well, "quant.sf")
+#_________________________________#
+```
+
+# 3.0 Figure 6C, and 6G
+## 3.1 DESEQ
+### 3.1.1 Modify Metadata
+
+```{r}
+# Extract Xenon Samples Meta Data
+sub_meta <- meta %>%
+  filter(Disease == "WT_PHAG" | Disease == "IFNcKO_PHAG") %>%
+  dplyr::select(-Age) %>%
+  separate(., col = "Disease",sep = "_", into = c("Genotype","PhagStatus")) %>% 
+  mutate(Treatment = ifelse(Treatment == "XEN","Xenon",Treatment))
+```
+
+```{r}
+##________UPDATE ENTIRE SECTION___________##
+# Set a file prefix
+fileprefix <- "Xenon_phago_IFNcKoXenonvsWTXenon" # Experimental group should be listed first in the file prefix**
+
+# Extract Xenon Samples Meta Data
+sub_meta2 <- sub_meta %>% filter(Treatment == "Xenon") %>% mutate(Comparision = paste0("IFNcKoXenonvsWTXenon"))
+
+# Pull specific Quant files
+position_list2 <- paste0(sub_meta2$Well, collapse = '|')
+sample_files2 <- grep(position_list2, quantfiles, value = TRUE) # Check number of files matches # of samples
+
+## Create Graphs All 
+table_lab <- paste0(sub_meta2$Well,"_",sub_meta2$Gender,"_",sub_meta2$Treatment,"_",sub_meta2$Genotype)
+```
+
+### 3.1.2 Tximport/DESEQ
+
+```{r, echo=FALSE}
+#_____________UPDATE!______________#
+# Setup the Design for Tximport/DESeq2
+design = "Genotype"
+treatcolumn = "Genotype"
+control = "WT"
+refanimal = "mouse"
+type = "LRT"
+#_________________________________#
+
+# Run Tx2gene
+tx2gene <- tx2genefun(reference = refanimal)
+
+# Run Tximport and DESeq 
+ddsTxi <- Tximportfun(sample_files2,reference = refanimal, metadata = sub_meta2, design = design, tx2gene = tx2gene)
+dds <- DESeqFun(treatcolumn = treatcolumn, control = control, DESeqObject = ddsTxi,test_type = type)
+
+# Save Deseq output
+ddsobj <- dds[[1]] # DESeq Object
+ddsres <- dds[[2]]# Results
+```
+
+### 3.1.3 Export Data
+
+```{r, echo = FALSE}
+#_____________UPDATE!______________#
+resdir <- paste0(workdir,expdir,"XXXX")
+#__________________________________#
+
+# Extract the stats
+extractedstats <- extractstats(ddsobj, ContrastObj = ddsres ,sub_meta2, graphlabel = table_lab)
+
+# Save to variables
+DEResults <- extractedstats[[1]] 
+DEcounts <- extractedstats[[2]] 
+sigDEResults <- extractedstats[[3]]
+sigDEcounts <- extractedstats[[4]] 
+
+# Export the Stats
+exportstats(DEResults = DEResults, DEcounts = DEcounts,sigDEResults = sigDEResults, 
+            sigDEcounts = sigDEcounts, directory = resdir,fileprefix = fileprefix)
+```
+
+## 3.2 Data Exploration
+### ScatterPlot Volcano (Figure 6C)
+
+```{r}
+# Setup Volcano Scatter Theme
+theme_scatter <- theme(aspect.ratio = 1, 
+                       panel.background = element_blank(),
+                       panel.border=element_rect(fill=NA),
+                       panel.grid.major = element_blank(),
+                       panel.grid.minor = element_blank(),
+                       strip.background=element_blank(),
+                       axis.title  = element_text(size = 20, colour = "black"),
+                       axis.text.x=element_text(colour="black",size =20),
+                       axis.text.y=element_text(colour="black",size =20),
+                       axis.ticks=element_line(colour="black"),
+                       plot.margin=unit(c(1,1,1,1),"line"),
+                       plot.title = element_text(colour="black",size =20))
+# Setup Variables 
+volcano <- DEResults %>% .[-1,]
+volcano$log_pval <- -log10(volcano$pvalue)
+sig_up_data <- volcano %>% filter(log2FoldChange > 0) %>% filter(pvalue < 0.05)
+sig_down_data <- volcano %>% filter(log2FoldChange < 0) %>% filter(pvalue < 0.05)
+
+# Setup Genes of Interest
+gene.of.interest <- c("Ccl6","Ifngr1","Cxcl9","Clec12a","Jund","Klf4","Ing2","Ccl24","Nlrp3","Plau","Hif3a","Ms4a1","Lif","Apob","Fgf2","Mrc2")
+UP_genes_data <- sig_up_data %>% filter(gene %in% gene.of.interest)
+DOWN_genes_data <- sig_down_data %>% filter(gene %in% gene.of.interest)
+
+
+
+# Scatter Volcano Plot
+scatter <- ggplot(volcano, aes(x= log2FoldChange, y= log_pval, label = gene)) +
+  geom_point(size=0.5, color = 'grey90') +
+  geom_point(data = sig_up_data, color = 'red', size = 1)+
+  geom_point(data = sig_down_data, color = 'dodgerblue3', size = 1) +
+  theme_scatter +
+  xlim(-5,5)+
+  ylim(0,25) +
+  geom_vline(xintercept = 0.15,colour="grey", linetype = "longdash") +
+  geom_vline(xintercept = -0.15,colour="grey", linetype = "longdash") +
+  geom_hline(yintercept = 1.3, colour="grey", linetype = "longdash") +
+  labs(title = table_header,
+       x = "Log2FC",
+       y = "-log(pvalue)") +
+    geom_text_repel(data = UP_genes_data,
+                  color = 'black', size = 6,fontface = 'italic',
+                  min.segment.length = 0,
+                  nudge_y = 5,
+                  nudge_x = 4 - abs(UP_genes_data$log2FoldChange),
+                  max.overlaps = Inf,
+                  box.padding = unit(0.5, 'mm'),
+                  point.padding = unit(0.5, 'mm'),
+                  direction = "y") +
+  geom_text_repel(data = DOWN_genes_data,
+                   color = 'black',size = 6, fontface = 'italic',
+                   min.segment.length =0,
+                   nudge_y = 3,
+                   nudge_x = -4 + abs(DOWN_genes_data$log2FoldChange),
+                   max.overlaps = Inf,
+                   point.padding = unit(0.5, 'mm'),
+                  direction = "y")
+
+# Save Figure
+ggsave(filename = paste0(workdir, expdir, "plots/VolcanoPlots/", fileprefix, "GOI.pdf"),
+  plot = scatter,
+  device = NULL,
+  path = NULL,
+  scale = 1,
+  width = NA,
+  height = NA,
+  units = c("mm"),
+  dpi = 300,
+  limitsize = TRUE,
+  bg = NULL
+)
+```
+
+### Generate IPA DotPlot (Figure 6G)
+```{r}
+##________UPDATE ENTIRE SECTION___________##
+IPAgraphdir <- paste0(workdir,expdir,"plots/IPA/Phagocytic/")
+##________________________________________##
+
+# Load Data of Interst
+IFNcKoXenonvsWTXenon <- readxl::read_excel(paste0(workdir,expdir,"results/Madison/Phagocytic/Xenon_phago_IFNcKoXenonvsWTXenon_statistics_pval01_redo_pathways.xls"), skip = 1) %>% 
+  dplyr::mutate(Experiment = paste0("IFNcKoXenonvsWTXenon")) %>% 
+  dplyr::rename(c("Ingenuity.Canonical.Pathways" = "Ingenuity Canonical Pathways", "z.score" = "z-score"))
+
+# Setup Pathways of interest
+path.of.interest <- c(
+"Oxidative Phosphorylation",
+"EIF2 Signaling",
+"RHOA Signaling",
+"LXR/RXR Activation",
+"IL-15 Signaling",
+"NF-κB Signaling",
+"Phagosome Formation",
+"ERK/MAPK Signaling",
+"Pyroptosis Signaling Pathway",
+"S100 Family Signaling Pathway",
+"Mitochondrial Dysfunction")
+
+# Generate Graph of Interest
+IPApoigraph(data = IFNcKoXenonvsWTXenon, POI = path.of.interest, directory = IPAgraphdir, fileprefix = fileprefix, width = 6, height =8)
+```
+
+
+# Figure 6: 
+## 5.1 DESEQ
+### 5.1.1 Modify Data
+
+```{r}
+#### Extract Xenon Samples Meta Data
+fileprefix <- "Xenon_phago_AllComparisions"
+sub_meta <- meta %>%
+  filter(Disease == "WT_PHAG" | Disease == "IFNcKO_PHAG") %>%
+  dplyr::select(-Age) %>%
+  separate(., col = "Disease",sep = "_", into = c("Genotype","PhagStatus")) %>% 
+  mutate(Treatment = ifelse(Treatment == "XEN","Xenon",Treatment)) %>%
+  mutate(Group = paste0(Genotype,"_",Treatment))
+
+# Pull specific Quant files
+position_list <- paste0(sub_meta$Well, collapse = '|')
+sample_files <- grep(position_list, quantfiles, value = TRUE) # Check number of files matches # of samples
+
+## Create Graphs All 
+table_header <- "All Comparisions"
+graph_lab <- paste0(sub_meta$Well,"\n",sub_meta$Gender,"\n",sub_meta$Treatment,"\n", sub_meta$Genotype) # Assign Rowname label
+table_lab <- paste0(sub_meta$Well,"_",sub_meta$Gender,"_",sub_meta$Treatment,"_",sub_meta$Genotype)
+```
+
+### 5.1.2 TXIMPORT/DESEQ
+
+```{r, echo=FALSE}
+#_____________UPDATE!______________#
+# Setup the Design for Tximport/DESeq2
+design = "Group"
+treatcolumn = "Group"
+control = "WT_AIR"
+refanimal = "mouse"
+var1 = "IFNcKO_Xenon"
+var2 = "WT_AIR"
+type = "LRT"
+#_________________________________#
+
+# Run Tx2gene
+tx2gene <- tx2genefun(reference = refanimal)
+
+# Run Tximport and DESeq 
+ddsTxi1 <- Tximportfun(sample_files,reference = refanimal, metadata = sub_meta, design = design, tx2gene = tx2gene)
+dds1 <- DESeqFun(treatcolumn = treatcolumn, control = control, DESeqObject = ddsTxi1, var1 = var1, var2 = var2, test_type = type)
+
+# Save Deseq output
+ddsobj <- dds1[[1]] # DESeq Object
+ddsres <- dds1[[2]]# Results
+```
+
+### 5.1.3 Export Stats
+
+```{r, echo = FALSE}
+#_____________UPDATE!______________#
+resdir <- paste0(workdir,expdir,"XXXX")
+#__________________________________#
+
+# Extract the stats
+extractedstats <- extractstats(ddsobj, ContrastObj = ddsres ,sub_meta, graphlabel = table_lab)
+
+# Save to variables
+DEResults <- extractedstats[[1]] 
+DEcounts <- extractedstats[[2]] 
+sigDEResults <- extractedstats[[3]]
+sigDEcounts <- extractedstats[[4]] 
+
+# Export the Stats
+exportstats(DEResults = DEResults, DEcounts = DEcounts,sigDEResults = sigDEResults, 
+            sigDEcounts = sigDEcounts, directory = resdir,fileprefix = fileprefix)
+```
+
+## 5.2 Data Exploration
+### 5.2.1 Heatmap (Figure G)
+
+```{r, echo=FALSE, fig.show='hide'}
+##________Update_______##
+heatmapdir <- paste0(workdir,expdir,"XXXX")
+#______________________#
+
+# Generate Heatmap for significant genes
+map <- genheatmap(sigDEcounts, colnames(sigDEcounts)[-1], height = 310, width = 15, directory = heatmapdir, cutrow = 4, gap_col = c(4,8,12),fileprefix = fileprefix, suffix = "pvalue05.pdf", show_row = TRUE)
+
+genheatmap(sigDEcounts, colnames(sigDEcounts)[-1], height = 310, width = 15, directory = heatmapdir, cutrow = 4, gap_col = c(4,8,12),fileprefix = fileprefix, suffix = "pvalue05_nolabels.pdf", show_row = FALSE)
+```
+
+## 5.3 GSEA Analysis
+### 5.3.1 Step 1: Extract Clusters
+```{r}
+##________Update_______##
+heatmap <- map
+reforg <- "mouse"
+numclusters <- "4"
+GSEAdir <- paste0(workdir,expdir,"plots/GSEAGO/")
+#______________________#
+
+# Extract Clusters from Dendrogram
+clusters <- ExtClustersfun(heatmap,numclusters = numclusters)
+
+# Export Cluster ID per gene 
+xlsx::write.xlsx(x = clusters, file = paste0(workdir, expdir, "results/", fileprefix, "ClusterID_GSEAGO_4breaks.xlsx"), row.names = FALSE)
+```
+
+### 5.3.2 Step2: GO Enrichment Analysis
+
+```{r}
+# Run GO Enrichment Analysis
+GSEAGOresults <- GSEAGOAnalysis(sigDEResults,geneclusters = clusters ,reforg = reforg)
+
+# GSEA go results per cluster
+Clust1obj <- GSEAGOresults[[1]]
+Clust2obj <- GSEAGOresults[[2]]
+Clust3obj <- GSEAGOresults[[3]]
+Clust4obj <- GSEAGOresults[[4]]
+
+# Save results
+Clust1res <- Clust1obj %>% .@result %>% filter(pvalue < 0.1)
+Clust2res <- Clust2obj %>% .@result %>% filter(pvalue < 0.1)
+Clust3res <- Clust3obj %>% .@result %>% filter(pvalue < 0.1)
+Clust4res <- Clust4obj %>% .@result %>% filter(pvalue < 0.1)
+
+# Export GSEAGO results
+xlsx::write.xlsx(x = Clust1res, file = paste0(workdir, expdir, "results/", fileprefix, "Cluster1_GSEAGOres.xlsx"), row.names = TRUE)
+xlsx::write.xlsx(x = Clust2res,file = paste0(workdir, expdir, "results/", fileprefix, "Cluster2_GSEAGOres.xlsx"), row.names = TRUE)
+xlsx::write.xlsx(x = Clust3res, file = paste0(workdir, expdir, "results/", fileprefix, "Cluster3_GSEAGOres.xlsx"), row.names = TRUE)
+xlsx::write.xlsx(x = Clust4res,file = paste0(workdir, expdir, "results/", fileprefix, "Cluster4_GSEAGOres.xlsx"), row.names = TRUE)
+```
+
+### 5.3.3 Step3: Generate Enrichment Graphs (Figure H-I)
+
+```{r}
+# Set the GSEA directory 
+GSEAdir <- paste0(workdir,expdir,"plots/GSEAGO/")
+
+
+# Setup Pathways of Interst
+poi_cluster1 <- c("cellular response to tumor necrosis factor",
+"lipid homeostasis",
+"regulation of mitochondrion organization",
+"regulation of myeloid leukocyte differentiation",
+"DNA biosynthetic process",
+"nervous system process",
+"cell cycle",
+"cell surface receptor signaling pathway")
+
+
+poi_cluster2 <- c("glial cell differentiation",
+"cell surface receptor signaling pathway involved in cell-cell signaling",
+"intracellular protein transport",
+"mRNA destabilization",
+"negative regulation of cell migration",
+"cytokine-mediated signaling pathway",
+"positive regulation of NF-kappaB transcription factor activity",
+"negative regulation of cell motility")
+
+
+# Generate Pathway Graphs
+Enrichgenes(Clust1obj,table_header = table_header,clustnum = "1",directory = GSEAdir,fileprefix = fileprefix, numshown = poi_cluster1)
+Enrichgenes(Clust2obj,table_header = table_header,clustnum = "2",directory = GSEAdir,fileprefix = fileprefix, numshown = poi_cluster2)
+
+# Export ClusterID data
+sigDEResults_mod <- merge(sigDEResults, clusters, by = "gene")
+xlsx::write.xlsx(x = sigDEResults_mod, file = paste0(workdir, expdir, "results/", fileprefix, "_sigResults_GSEAGO_ClusterID.xlsx"), row.names = FALSE)
+```
+
