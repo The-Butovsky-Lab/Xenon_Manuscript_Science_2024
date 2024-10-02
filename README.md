@@ -24,7 +24,7 @@ Supp Fig.6 a-c | 5xFAD-MITRG-iMGL 6M | SuppFig6_A-C_5xFAD_MITRG-iMGL_6M.Rmd | GS
 Supp Fig.7 c-e | Xenon in IFNy blocker -mice | SuppFig7C-E_Xenon_IFNyblocker.Rmd | GSE272686 |
 Supp Fig 9 a-g | Xenon PK in APP.PS1 Tcells -mice | SuppFig9A-G_Xenon_PK_APPPS1_Tcells.Rmd | GSE272801 |
 
-The SuperSeries containing all sub-GSEs is  GSE277025.Each script contains all necessary steps to reproduce the analysis and figures presented in the manuscript. Be sure to follow the usage instructions and install the required dependencies.
+The SuperSeries containing all sub-GSEs is  GSE277025. Also, each script contains all necessary steps to reproduce the analysis and figures presented in the manuscript. Be sure to follow the usage instructions and install the required dependencies.
 
 ## Languages and Packages
 The code is primarily written in the following languages:
