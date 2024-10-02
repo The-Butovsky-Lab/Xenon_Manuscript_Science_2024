@@ -1,0 +1,171 @@
+---
+title: "SK-5TOB_APPPS1_IFNgXenon_DeseqAnalysis"
+author: "Madison"
+date: "2023-08-18"
+output: html_document
+---
+
+# Setup the Environment
+## Load necessary packages
+```{r Setup the Environment, echo=FALSE, message=FALSE}
+# Load packages
+library(tidyverse)
+library(magrittr)
+library(gt)
+library(corrplot)
+
+# Set a seed
+set.seed(123)
+
+# Load DESeq workflow scripts
+workdir <- "XXXX"
+scriptDir <- "XXXX"
+source(file = paste0(scriptDir,"DESeq.R"))
+source(file = paste0(scriptDir,"DataVisualizations.R"))
+source(file = paste0(scriptDir,"Deseq_Statistics.R"))
+
+# Set Diagram settings
+options(width=200)
+```
+## Load Data
+```{r pressure, echo=FALSE}
+#_____________UPDATE!______________#
+# Setup Variables
+expdir <- "XXXX?"
+
+# Load Data & Modify
+meta <- readxl::read_excel(paste0(workdir, expdir,"Metadata.xlsx"))  %>% dplyr::rename(c("Position" = "Well")) 
+
+# Setup File Path to Quant Files
+quantfiles <- file.path(workdir,expdir,"transcripts_quant/", meta$Position, "quant.sf")
+#_________________________________#
+```
+
+# Code for Fig 6I-J
+## DESEQ
+### Modify Metadata 
+```{r, echo=FALSE}
+##________UPDATE ENTIRE SECTION___________##
+# Set a file prefix
+fileprefix <- "APPPS1_IFNgXenon" # Experimental group should be listed first in the file prefix**
+
+# Extract Samples Meta Data
+sub_meta <- meta %>% dplyr::mutate(Grouped = paste0(meta$Position,"_", meta$Mouse,"_", meta$`Cell type`,"_",meta$Treatment))
+
+# Pull specific Quant files
+position_list <- paste0(sub_meta$Position, collapse = '|')
+sample_files <- grep(position_list, quantfiles, value = TRUE) # Check number of files matches # of samples
+
+# Check the metadata and files are in the correct order
+## QC check - Order of metafile samples must match quant file order!  Fix metadata file if not!
+all(file.exists(quantfiles))
+
+## Create Graphs and Table Lables
+table_lab <- sub_meta$Grouped
+
+# Format the Meta Data
+table_header <- "XXXX"
+sub_meta %>%
+  gt() %>% 
+  tab_header(
+    title = md("**XXXXX**"),
+    subtitle = md(paste0(table_header, " experiment's meta data are presented"))
+  ) %>%
+  cols_move_to_start(
+    columns = c(Position) 
+  )
+```
+
+
+### Tximport/DESeq
+
+```{r, echo=FALSE}
+#_____________UPDATE!______________#
+# Setup the Design for Tximport/DESeq2
+design = "Treatment" ## Can not take into account the Mouse Genotype as it leads to full matrix failure (linear combinations)
+treatcolumn = "Treatment"
+control = "IgG"
+refanimal = "mouse"
+type <- "LRT"
+#_________________________________#
+# Run Tx2gene
+tx2gene <- tx2genefun(reference = refanimal)
+
+# Run Tximport and DESeq 
+ddsTxi <- Tximportfun(sample_files, reference = refanimal, metadata = sub_meta, design = design, tx2gene = tx2gene)
+dds <- DESeqFun(treatcolumn = treatcolumn, control = control, DESeqObject = ddsTxi, test_type = type)
+
+# Save Deseq output
+ddsobj <- dds[[1]] # DESeq Object
+ddsres <- dds[[2]]# Results
+```
+
+### Export DESEQ results
+
+```{r}
+#_____________UPDATE!______________#
+resdir <- paste0(workdir,expdir,"XXXXX")
+#__________________________________#
+
+# Extract the stats on the DESeq run 
+extractedstats <-  extractstats(ddsobj, ContrastObj = ddsres ,sub_meta, graphlabel = table_lab)
+
+# Save to variables
+DEResults <- extractedstats[[1]] 
+DEcounts <- extractedstats[[2]] 
+sigDEResults <- extractedstats[[3]] 
+sigDEcounts <- extractedstats[[4]] 
+
+summary(ddsres, alpha = 0.1)
+
+# Export the Stats
+exportstats(DEResults = DEResults, DEcounts = DEcounts,sigDEResults = sigDEResults, 
+            sigDEcounts = sigDEcounts, directory = resdir,fileprefix = fileprefix)
+```
+## Data Exploration
+### Heatmaps (Fig 6I)
+
+```{r}
+#_____________UPDATE!______________#
+heatmapdir <- paste0(workdir, expdir, "plots/heatmaps/APPPS1_IFNgXenon/")
+#__________________________________#
+
+# Generate Heatmap for significant genes
+genheatmap(sigDEcounts, colnames(sigDEcounts)[-1], height = 100, width = 15, directory = heatmapdir, cutrow = 2, gap_col = c(4),fileprefix = fileprefix, suffix = "_pvalue05.pdf", show_row = TRUE)
+```
+
+### IPA Dotplot (Fig 6J)
+
+```{r}
+##________UPDATE ENTIRE SECTION___________##
+IPAgraphdir <- paste0(workdir,expdir,"plots/IPA/")
+##________________________________________##
+
+# Setup Fileprefix
+fileprefix <- "APPPS1_IFNgXenon_AllSamples_"
+
+# Load Data
+IPAdata <- readxl::read_xls("IPA Pathway File.xls",skip = 1) %>%
+  dplyr::mutate(Experiment = paste0("APP.PS1_IFNgXenon")) %>%
+  rename(c("Ingenuity Canonical Pathways" = "Ingenuity.Canonical.Pathways", "z-score" = "z.score"))
+
+# Setup Pathways of interest
+path.of.interest <- c(
+"Synaptic Long Term Depression",
+"Synaptic Long Term Potentiation",
+"ERK/MAPK Signaling",
+"Protein Kinase A Signaling",
+"Wound Healing Signaling Pathway",
+"CD40 Signaling",
+"Th1 Pathway",
+"TNFR1 Signaling",
+"PPARα/RXRα Activation",
+"Retinoic acid Mediated Apoptosis Signaling",
+"Granzyme A Signaling",
+"CTLA4 Signaling in Cytotoxic T Lymphocytes")
+
+# Generate Graph of Interest
+graph <- IPApoigraph_single(data = IPAdata, POI = path.of.interest, directory = IPAgraphdir, fileprefix = fileprefix,suffix = "poi", width = 5, height = 7)
+graph
+```
+
